@@ -1,17 +1,16 @@
 import axios from 'axios';
+import { BASE_URL } from '../config';
 
 interface Props {
   path: string;
   queryParams?: Record<string, string>;
 }
 
-const baseURL = 'https://api.mercadolibre.com/';
-
 const api = axios.create({
   headers: {
     Accept: 'application/json',
   },
-  baseURL,
+  baseURL: BASE_URL,
 });
 
 export const get = async ({ path, queryParams }: Props) => {
