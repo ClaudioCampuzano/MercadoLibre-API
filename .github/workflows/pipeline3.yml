@@ -23,6 +23,11 @@ jobs:
           echo "run=false" >> $GITHUB_OUTPUT
         fi
 
+    - name: Fetch specific branches
+      run: |
+        git fetch origin ${{ github.event.pull_request.base.ref }}:refs/remotes/origin/${{ github.event.pull_request.base.ref }}
+        git fetch origin ${{ github.event.pull_request.head.ref }}:refs/remotes/origin/${{ github.event.pull_request.head.ref }}
+
     - name: Get changed files
       id: changed-files
       run: |
