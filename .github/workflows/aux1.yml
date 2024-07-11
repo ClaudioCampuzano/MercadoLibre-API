@@ -23,16 +23,26 @@ jobs:
           echo "run=false" >> $GITHUB_OUTPUT
         fi
 
+    - name: Fetch all history for all branches and tags
+      run: git fetch --unshallow
+
+    # - name: Fetch specific branches
+    #   run: |
+    #     git fetch origin ${{ github.event.pull_request.base.ref }}:refs/remotes/origin/${{ github.event.pull_request.base.ref }}
+    #     git fetch origin ${{ github.event.pull_request.head.ref }}:refs/remotes/origin/${{ github.event.pull_request.head.ref }}
+
     - name: Get changed files
       id: changed-files
       run: |
+        BASE_SHA="${{ github.event.pull_request.base.sha }}"
+        HEAD_SHA="${{ github.event.pull_request.head.sha }}"
         files=$(git diff --name-only $BASE_SHA $HEAD_SHA | wc -l)
         echo "files=$files" >> $GITHUB_OUTPUT
 
     - name: Close Backport PR if no files changed
       if: steps.check-branch.outputs.run == 'true' && steps.changed-files.outputs.files == '0'
       run: |
-        comment="Closing this Backport because it has no changed files."
+        comment="Closing this Backport and delete branch because it has no changed files."
         gh pr close ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --comment "${comment}" --delete-branch
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
