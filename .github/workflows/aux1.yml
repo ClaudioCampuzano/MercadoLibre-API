@@ -12,7 +12,10 @@ jobs:
 
     steps:
     - name: Check out the repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
+    
+    - name: Fetch all history for all branches and tags
+      run: git fetch --unshallow
 
     - name: Check branch name
       id: check-branch
@@ -23,15 +26,8 @@ jobs:
           echo "run=false" >> $GITHUB_OUTPUT
         fi
 
-    - name: Fetch all history for all branches and tags
-      run: git fetch --unshallow
-
-    # - name: Fetch specific branches
-    #   run: |
-    #     git fetch origin ${{ github.event.pull_request.base.ref }}:refs/remotes/origin/${{ github.event.pull_request.base.ref }}
-    #     git fetch origin ${{ github.event.pull_request.head.ref }}:refs/remotes/origin/${{ github.event.pull_request.head.ref }}
-
     - name: Get changed files
+      if: steps.check-branch.outputs.run == 'true'
       id: changed-files
       run: |
         BASE_SHA="${{ github.event.pull_request.base.sha }}"
@@ -48,15 +44,16 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   delete_closed_pr_branches:
-    if: github.event.action == 'closed'
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
 
     steps:
     - name: Check out the repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Delete closed PR branches
-      if: github.event_name == 'pull_request' && github.event.action == 'closed'
       run: |
         branch_name=$(echo "${{ github.event.pull_request.head.ref }}" | sed 's/\//%2F/g')
+        gh api --method DELETE repos/${{ github.repository }}/git/refs/heads/$branch_name
+      env: 
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
