@@ -1,0 +1,52 @@
+name: Close Empty Backport PR
+
+on:
+  pull_request:
+    types: [opened, synchronize, closed]
+
+
+jobs:
+  close_empty_backport:
+    if: github.event.action == 'opened' || github.event.action == 'synchronize'
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out the repository
+      uses: actions/checkout@v3
+
+    - name: Check branch name
+      id: check-branch
+      run: |
+        if [[ "${{ github.event.pull_request.head.ref }}" == backport/* ]]; then
+          echo "run=true" >> $GITHUB_OUTPUT
+        else
+          echo "run=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Get changed files
+      id: changed-files
+      run: |
+        files=$(git diff --name-only $BASE_SHA $HEAD_SHA | wc -l)
+        echo "files=$files" >> $GITHUB_OUTPUT
+
+    - name: Close Backport PR if no files changed
+      if: steps.check-branch.outputs.run == 'true' && steps.changed-files.outputs.files == '0'
+      run: |
+        comment="Closing this Backport because it has no changed files."
+        gh pr close ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --comment "${comment}" --delete-branch
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  delete_closed_pr_branches:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out the repository
+      uses: actions/checkout@v3
+
+    - name: Delete closed PR branches
+      if: github.event_name == 'pull_request' && github.event.action == 'closed'
+      run: |
+        branch_name=$(echo "${{ github.event.pull_request.head.ref }}" | sed 's/\//%2F/g')
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
